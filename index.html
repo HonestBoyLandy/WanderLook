@@ -292,6 +292,7 @@
   .btn:hover{transform:translate(-1px,-1px);background:#ffefdb}
   .btn:active{transform:translate(1px,1px);box-shadow:none}
   .btn.primary{background:#e8926a;border-color:#b25f3c;color:#fff8ec}
+  .btn:disabled{opacity:.4;cursor:default;transform:none;box-shadow:none}
   .btn.ghost{box-shadow:none;background:transparent}
   .btn.active{background:var(--ink);color:#fff6e6;border-color:var(--ink)}
 
@@ -428,6 +429,14 @@
   }
   body.tpl-dark .mini-btn{background:transparent;color:var(--ink);border-color:#5a6b8a}
   .poi-thumb{width:74px;height:56px;object-fit:cover;border-radius:8px;border:2px solid rgba(59,50,38,.5);display:block;margin-top:4px}
+  /* POI 多图缩略（FR-07） */
+  .poi-thumbs{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+  .poi-thumb-wrap{position:relative;display:inline-block}
+  .poi-thumb-del{
+    position:absolute;top:-6px;right:-6px;width:20px;height:20px;
+    border-radius:50%;border:none;background:#d95f43;color:#fff;
+    cursor:pointer;font-size:11px;line-height:1;
+  }
   .seg-row{
     display:flex;gap:8px;align-items:center;flex-wrap:wrap;
     padding:8px 10px;margin-bottom:8px;
@@ -652,6 +661,66 @@
   }
   body.is-export .export-badge{display:inline-block}
 
+  /* ---------- 导出下拉菜单（FR-20） ---------- */
+  #exportMenu{
+    display:none;position:absolute;top:calc(100% + 6px);right:12px;z-index:1100;
+    flex-direction:column;gap:8px;min-width:230px;padding:14px;
+    background:rgba(255,253,246,.98);border:2px solid rgba(122,94,66,.7);
+    border-radius:16px 6px 18px 7px;box-shadow:3px 4px 0 rgba(122,94,66,.2);
+  }
+  body.tpl-dark #exportMenu{background:#2a3444;border-color:#3a475c}
+  #exportMenu.show{display:flex}
+  #exportMenu .btn{width:100%;text-align:left;padding:10px 14px;font-size:14px}
+
+  /* ---------- 封面「装扮」抽屉（渐进披露） ---------- */
+  .dress-up{margin-top:16px;padding-top:12px;border-top:2px dashed rgba(59,50,38,.25)}
+  #btnDress{font-size:13px;padding:5px 12px}
+  #btnDress::before{content:'▾ ';font-size:11px}
+  #btnDress.open::before{content:'▴ '}
+  #dressPanel{margin-top:10px}
+
+  /* ---------- 自由摆放：吸附对齐辅助线（FR-06） ---------- */
+  .free-guide{
+    position:absolute;z-index:40;display:none;pointer-events:none;
+    background:rgba(217,95,67,.55);
+  }
+  .free-guide.gv{width:1.5px;top:0;bottom:0}
+  .free-guide.gh{height:1.5px;left:0;right:0}
+
+  /* ---------- 快照弹层（FR-03） ---------- */
+  #snapMask{
+    position:fixed;inset:0;z-index:1200;display:none;
+    background:rgba(30,25,15,.5);align-items:center;justify-content:center;padding:20px;
+  }
+  #snapMask.show{display:flex}
+  #snapBox{
+    width:100%;max-width:420px;background:var(--paper,#fff8ec);color:var(--ink,#5b4636);
+    border:2px solid var(--card-border,rgba(122,94,66,.65));
+    border-radius:18px 6px 22px 8px;padding:20px 22px;max-height:80vh;overflow:auto;
+    box-shadow:4px 6px 0 rgba(0,0,0,.2);font-size:14px;line-height:1.8;
+  }
+  #snapBox h3{font-family:var(--hand);margin:0 0 8px}
+  .snap-item{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:8px 0;border-bottom:1px dashed rgba(59,50,38,.25);
+  }
+  .snap-item time{font-size:12px;opacity:.75}
+
+  /* ---------- 手机端编辑胶囊（FR-22） ---------- */
+  #mobEditPill{
+    display:none;position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));
+    z-index:1050;padding:10px 18px;font-size:15px;
+    box-shadow:2px 4px 0 rgba(122,94,66,.3);
+  }
+
+  /* ---------- 手机端：禁用自由摆放 + 预览态胶囊 ---------- */
+  @media (max-width:768px){
+    #btnFree{display:none !important}
+    body.preview #mobEditPill{display:inline-block}
+    body.editing #mobEditPill{display:none}
+    #exportMenu{left:12px;right:12px}
+  }
+
   /* ---------- 平板（iPad 竖屏及以下） ---------- */
   @media (max-width:1024px){
     #blockList.blocks-col3{grid-template-columns:repeat(2,1fr)}
@@ -714,34 +783,39 @@
 <header id="topbar">
   <div class="brand">🗺️ 旅迹 <small>旅行攻略编辑器 · MVP Demo</small><span class="export-badge">已导出的攻略副本 · 可继续编辑</span></div>
   <div class="actions">
-    <!-- 低频操作组：手机端收进「⋯ 更多」菜单 -->
+    <!-- 编辑工具组：手机端收进「⋯ 更多」菜单 -->
     <div class="act-group" id="actA">
       <button class="btn ghost" id="btnHelp">❓ 使用说明</button>
       <button class="btn ghost" id="btnReset">🔄 恢复示例路线</button>
       <button class="btn" id="btnFree">🧲 自由摆放</button>
+      <button class="btn" id="btnSnap" data-editonly title="查看最近 5 次保存的快照">⏪ 快照</button>
       <select id="fontPick" class="btn" style="padding:6px 8px" title="全局字体">
         <option value="">✍️ 字体：手帐体</option>
-        <option value="kai">楷体</option>
-        <option value="wk">霞鹜文楷</option>
-        <option value="ma">毛笔楷（马善政）</option>
-        <option value="zhi">狂草（志莽行书）</option>
         <option value="hei">黑体</option>
         <option value="song">宋体</option>
       </select>
     </div>
     <!-- 高频操作组：手机端常驻顶栏 -->
     <div class="act-group" id="actP">
+      <button class="btn" id="btnUndo" data-editonly title="撤销（Ctrl+Z）" disabled>↩︎</button>
+      <button class="btn" id="btnRedo" data-editonly title="重做（Ctrl+Shift+Z）" disabled>↪︎</button>
       <button class="btn" id="btnMode">👁 预览</button>
       <span id="saveState" data-editonly style="display:none;color:#c0392b;font-size:12px;font-weight:700;align-self:center">● 有未保存的修改</span>
       <button class="btn" id="btnSave">💾 保存</button>
     </div>
-    <!-- 导出操作组：手机端收进「⋯ 更多」菜单 -->
+    <!-- 导出操作组：合并为一个下拉菜单（FR-20），手机端收进「⋯ 更多」 -->
     <div class="act-group" id="actB">
-      <button class="btn" id="btnImg">🖼️ 存图片</button>
-      <button class="btn" id="btnPdf">📄 导出 PDF</button>
-      <button class="btn primary" id="btnExport">⬇️ 导出 HTML</button>
+      <button class="btn primary" id="btnExport" aria-haspopup="true" aria-expanded="false">⬇️ 导出 ▾</button>
     </div>
     <button class="btn" id="btnMore" aria-label="更多操作" aria-expanded="false">⋯ 更多</button>
+    <div id="exportMenu" role="menu">
+      <button class="btn primary" id="btnExpHtml" role="menuitem">⬇️ 导出 HTML（可分享）</button>
+      <button class="btn" id="btnImg" role="menuitem">🖼️ 存为长图</button>
+      <button class="btn" id="btnPdf" role="menuitem">📄 导出 PDF</button>
+      <button class="btn" id="btnBackup" role="menuitem">💾 导出备份（JSON）</button>
+      <button class="btn" id="btnRestore" role="menuitem">📂 导入备份 / 恢复</button>
+      <input type="file" id="restoreFile" accept=".json,.html" style="display:none">
+    </div>
   </div>
 </header>
 
@@ -753,16 +827,19 @@
     <h1 contenteditable="true" spellcheck="false" data-b="title"></h1>
     <p class="subtitle" contenteditable="true" spellcheck="false" data-b="subtitle"></p>
     <div class="date-stamp" contenteditable="true" spellcheck="false" data-b="dateText"></div>
-    <div class="bg-tools" data-editonly>
-      <span>模板：</span>
-      <button class="swatch" data-act="theme" data-v="journal" style="background:#fdf4e3" title="奶油手帐"></button>
-      <button class="swatch" data-act="theme" data-v="kraft" style="background:#c9ad86" title="牛皮纸旅记"></button>
-      <button class="swatch" data-act="theme" data-v="night" style="background:#1d2430" title="墨蓝夜行"></button>
-      <button class="swatch" data-act="theme" data-v="pixel" style="background:#e7e3d4;border-radius:0" title="像素冒险"></button>
-      <button class="mini-btn" id="btnTpl">🎨 全部模板（13）</button>
-      <input type="color" id="bgColor" title="自定义背景色" style="width:30px;height:28px;padding:0;border:none;background:none;cursor:pointer">
-      <label class="up-btn">🖼️ 背景图<input type="file" id="bgFile" accept="image/*"></label>
-      <button class="mini-btn" id="btnClearBg">清除背景图</button>
+    <div class="dress-up" data-editonly>
+      <button class="mini-btn" id="btnDress" aria-expanded="false">🎨 装扮（模板 / 背景）</button>
+      <div class="bg-tools" id="dressPanel" hidden>
+        <span>模板：</span>
+        <button class="swatch" data-act="theme" data-v="journal" style="background:#fdf4e3" title="奶油手帐"></button>
+        <button class="swatch" data-act="theme" data-v="kraft" style="background:#c9ad86" title="牛皮纸旅记"></button>
+        <button class="swatch" data-act="theme" data-v="night" style="background:#1d2430" title="墨蓝夜行"></button>
+        <button class="swatch" data-act="theme" data-v="pixel" style="background:#e7e3d4;border-radius:0" title="像素冒险"></button>
+        <button class="mini-btn" id="btnTpl">🎨 全部模板（13）</button>
+        <input type="color" id="bgColor" title="自定义背景色" style="width:30px;height:28px;padding:0;border:none;background:none;cursor:pointer">
+        <label class="up-btn">🖼️ 背景图<input type="file" id="bgFile" accept="image/*"></label>
+        <button class="mini-btn" id="btnClearBg">清除背景图</button>
+      </div>
     </div>
   </section>
 
@@ -787,7 +864,7 @@
       <span><i class="lg-line" style="border-color:#1e9e5a;border-top-style:dashed"></i>步行</span>
       <span><i class="lg-line" style="border-color:#5a6b7b;border-top-style:dashed"></i>飞机</span>
     </div>
-    <p class="hint">像腾讯地图 App 一样：在上方搜索框输入地点 → 从联想列表选择 → 自动加入路线并连线。也可以双击地图快速加点、拖动圆点微调。驾车段在下方点「🔀 选路线」，可像导航一样在多个真实方案里挑选。</p>
+    <p class="hint">🔍 搜地点加入路线 · 双击地图快速加点 · 拖动圆点微调 · 详细玩法见顶栏「❓ 使用说明」</p>
   </section>
 
   <!-- 路线与景点编辑 -->
@@ -848,10 +925,20 @@
   <div class="footer">旅迹 TripTrace · 旅行攻略编辑器 · 导出的 HTML 可直接分享/打印</div>
 </main>
 
+<button class="btn" id="mobEditPill">✏️ 切换编辑</button>
+
+<div id="snapMask">
+  <div id="snapBox">
+    <h3>⏪ 快照回滚</h3>
+    <div id="snapList"></div>
+    <div style="text-align:right;margin-top:12px"><button class="btn ghost" id="btnSnapClose">关闭</button></div>
+  </div>
+</div>
+
 <div id="helpMask">
   <div id="helpBox">
     <h3>❓ 使用说明（MVP Demo）</h3>
-    <p><b>1. 直接点字就能改</b>：标题、副标题、日期、每日行程、贴士、预算，都是虚线占位，点击输入即改。<b>改动不会自动保存</b>——改完点顶栏「💾 保存」（或 Ctrl+S）才写入浏览器本地；有未保存修改时顶栏会显示红点提醒，导出前也会自动先保存。</p>
+    <p><b>1. 直接点字就能改</b>：标题、副标题、日期、每日行程、贴士、预算，都是虚线占位，点击输入即改。<b>停止输入约 2 秒会自动保存</b>到浏览器本地，也可随时点「💾 保存」（或 Ctrl+S）；顶栏「⏪ 快照」可回滚到最近 5 次保存的版本，↩︎/↪︎（Ctrl+Z / Ctrl+Shift+Z）可撤销/重做增删和排序操作。数据只存在本浏览器——<b>换设备前请先「⬇️ 导出」里的备份 JSON</b>。</p>
     <p><b>2. 地图</b>：顶部搜索框输入地点名，从联想列表选一个即可加入路线（也可双击地图快速加）；编号圆点可拖动；「景点与交通编辑」里可改名字、坐标、小记、上传照片、调顺序、换交通方式；驾车段点「🔀 选路线」，可在多条真实路线方案中挑选一条。</p>
     <p><b>3. 照片</b>：每个行程日和卡片的「📷 加照片」支持手机相册选取，照片会压缩后内嵌进文档（本地存储有限，建议每次上传不要太多张）。</p>
     <p><b>4. 官方模板</b>：封面下方有 4 个快捷模板色板（奶油手帐/牛皮纸/墨蓝夜行/像素冒险），点「🎨 全部模板」可从 <b>13 套官方模板</b>（含樱花手帖、古镇水墨、大漠驼铃、海盐汽水、枫叶温泉等）中任意切换——配色、纸纹、卡片底色整套更换，内容原样保留；也可自定义背景色、上传背景图。</p>
@@ -1014,9 +1101,36 @@ function loadState(){
   state.textStyles = state.textStyles || {};
   if (state.fontFamily == null) state.fontFamily = '';
   state.freeLayout = !!state.freeLayout;
+
+  /* v0.9 迁移：贴士字符串 → {id,text}，样式键 tip:<序号> 迁移到 tip:<id>（FR-05） */
+  var tipsMigrated = false;
+  state.tips = (state.tips || []).map(function(t, i){
+    if (typeof t === 'string'){
+      tipsMigrated = true;
+      return { id: 'tip-' + Date.now().toString(36) + '-' + i, text: t };
+    }
+    if (!t.id){ tipsMigrated = true; t.id = 'tip-' + Date.now().toString(36) + '-' + i; }
+    return t;
+  });
+  if (tipsMigrated && state.tips.length){
+    var tsOld = state.textStyles;
+    Object.keys(tsOld).forEach(function(k){
+      var m = /^tip:(\d+)$/.exec(k);
+      if (m && state.tips[+m[1]]){ tsOld['tip:' + state.tips[+m[1]].id] = tsOld[k]; delete tsOld[k]; }
+    });
+  }
+  /* v0.9 迁移：POI 单图 photo → 多图 photos 数组（FR-07） */
+  (state.pois || []).forEach(function(p){
+    if (p.photo && !p.photos) p.photos = [p.photo];
+    p.photos = p.photos || [];
+  });
 }
-/* ---------- 手动保存机制：改动先标记，点「💾 保存」才写入本地 ---------- */
+/* ---------- 保存机制 v0.9：手动保存 + 自动保存（2s 防抖）+ 近 5 次快照（FR-02/03） ---------- */
 var dirty = false;
+var autoSaveTimer = null;
+var lastSavedJson = null; /* 最近一次成功持久化的内容，作为快照基线 */
+var SNAP_MAX = 5;
+
 function markDirty(){
   dirty = true;
   var b = $('#btnSave');
@@ -1024,18 +1138,110 @@ function markDirty(){
   var s = $('#saveState');
   if (s) s.style.display = 'inline';
 }
+/* 快照存内存（仅本次会话有效）：避免快照挤占 localStorage 配额，反把正式数据挤爆 */
+var snapStore = [];
+function pushSnapshot(prevJson){
+  if (!prevJson) return;
+  if (snapStore.length && snapStore[snapStore.length - 1].data === prevJson) return;
+  snapStore.push({ t: Date.now(), data: prevJson });
+  while (snapStore.length > SNAP_MAX) snapStore.shift();
+}
+var quotaAlerting = false; /* 防止「确认导出→导出再失败→再确认」死循环 */
+function quotaAlert(){
+  if (quotaAlerting){ toast('⚠️ 本地存储空间不足，保存失败，请删减照片后重试'); return; }
+  quotaAlerting = true;
+  toast('⚠️ 本地存储空间不足，保存失败');
+  if (confirm('本地存储空间已满，继续编辑可能丢失修改。\n\n现在导出一份备份 JSON 吗？\n（导出后可删减照片或清理旧内容释放空间）')){
+    quotaAlerting = false;
+    exportBackup();
+  } else {
+    quotaAlerting = false;
+  }
+}
 function persist(){
-  try { localStorage.setItem(LS_PREFIX + state.id, JSON.stringify(state)); }
-  catch(e){ toast('⚠️ 本地存储空间不足，照片可能太多，建议删减后再编辑'); }
+  var json = null;
+  try { json = JSON.stringify(state); } catch(e){ json = null; }
+  if (json != null){
+    try {
+      localStorage.setItem(LS_PREFIX + state.id, json);
+      pushSnapshot(lastSavedJson);   /* 覆盖前把上一个版本压入快照栈 */
+      lastSavedJson = json;
+    } catch(e){
+      quotaAlert();                  /* FR-02：超限兜底，不清 dirty 以便重试 */
+      return;
+    }
+  }
   dirty = false;
   var b = $('#btnSave');
   if (b) b.classList.remove('attention');
   var s = $('#saveState');
   if (s) s.style.display = 'none';
 }
-/* 兼容旧调用：页面里所有 save()/saveSoon() 现在只标记“未保存”，不直接落盘 */
-function save(){ markDirty(); }
-function saveSoon(){ markDirty(); }
+/* 兼容旧调用：save()/saveSoon() 都标记未保存并安排 2 秒后自动保存（FR-03） */
+function scheduleAutoSave(){
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(function(){ if (dirty) persist(); }, 2000);
+}
+function save(){ markDirty(); scheduleAutoSave(); }
+function saveSoon(){ save(); }
+
+/* ---------- 快照回滚（FR-03） ---------- */
+function openSnapshotPanel(){
+  var list = snapStore.slice().reverse(); /* 最新的在前 */
+  var box = $('#snapList');
+  box.innerHTML = list.length ? list.map(function(s, i){
+    var d = new Date(s.t);
+    var label = (i === 0 ? '（上一次保存）' : '');
+    return '<div class="snap-item"><span>🗂 ' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' +
+      ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + label + '</span>' +
+      '<button class="mini-btn" data-snap="' + (list.length - 1 - i) + '">恢复到此版本</button></div>';
+  }).join('') : '<p class="hint">还没有快照。每次自动/手动保存前都会留一份（最近 5 份，本次打开页面期间有效）。</p>';
+  $('#snapMask').classList.add('show');
+}
+function restoreSnapshot(idx){
+  if (!snapStore[idx]) return;
+  if (!confirm('恢复到该时间点的版本？此操作本身可再撤销。')) return;
+  pushUndo();
+  applyStateSnap(snapStore[idx].data);
+  $('#snapMask').classList.remove('show');
+  toast('⏪ 已恢复到快照版本');
+}
+
+/* ---------- 备份导出 / 导入 / 拖入恢复（FR-01） ---------- */
+function exportBackup(){
+  persist(); /* 先把最新内容落盘，备份即最新 */
+  var payload = { app: 'triptrace', version: 1, exportedAt: new Date().toISOString(), data: state };
+  var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+  var a = document.createElement('a');
+  var d = new Date();
+  var fname = '旅迹备份-' + d.getFullYear() + ('0' + (d.getMonth() + 1)).slice(-2) + ('0' + d.getDate()).slice(-2) +
+    '-' + ('0' + d.getHours()).slice(-2) + ('0' + d.getMinutes()).slice(-2) + '.json';
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 800);
+  toast('💾 备份已下载：' + fname);
+}
+function importBackupText(txt, name){
+  var data = null;
+  try {
+    var obj = JSON.parse(txt);
+    if (obj && obj.app === 'triptrace' && obj.data && obj.data.pois) data = obj.data;
+    else if (obj && obj.pois) data = obj; /* 兼容裸 state JSON */
+  } catch(e){}
+  if (!data){ /* 兼容：从导出的 HTML 副本中提取内嵌数据 */
+    var m = txt.match(/<script id="trip-data">window\.__TRIP_DATA__=([\s\S]*?);<\/script>/);
+    if (m){ try { data = JSON.parse(m[1]); } catch(e2){} }
+  }
+  if (!data || !data.pois){ toast('❌ 「' + name + '」不是有效的旅迹备份'); return; }
+  if (!confirm('导入「' + name + '」将覆盖当前攻略（含地图/照片/卡片），确定？')) return;
+  /* 统一 id：本 MVP 只存一份攻略，保证 reload 后能被 loadState 读取 */
+  data.id = DEFAULT_STATE.id;
+  try { localStorage.setItem(LS_PREFIX + DEFAULT_STATE.id, JSON.stringify(data)); }
+  catch(e){ quotaAlert(); return; }
+  toast('✅ 备份已导入，正在刷新…');
+  setTimeout(function(){ location.reload(); }, 600);
+}
 
 /* ---------- 静态字段绑定 ---------- */
 function bindStatic(){
@@ -1093,6 +1299,7 @@ function renderTplGrid(){
   }).join('');
 }
 function applyTemplate(t){
+  pushUndo('切换模板');
   state.template = t;
   state.bgImage = null;
   renderBg();
@@ -1362,9 +1569,10 @@ function drawMarkers(){
   });
 }
 function popupHtml(p){
+  var ph = (p.photos && p.photos[0]) || p.photo;
   return '<b>' + esc(p.name) + '</b>' +
          (p.note ? '<br>' + esc(p.note) : '') +
-         (p.photo ? '<img class="ph-pop" src="' + p.photo + '">' : '');
+         (ph ? '<img class="ph-pop" src="' + ph + '">' : '');
 }
 
 function fitAll(){
@@ -1387,7 +1595,8 @@ function initMap(){
 
     map.on('dblclick', function(e){
       if (!editing()) return;
-      state.pois.push({ id: uid(), name: '新地点', lat: e.latlng.lat, lng: e.latlng.lng, note: '', photo: null });
+      pushUndo('添加景点');
+      state.pois.push({ id: uid(), name: '新地点', lat: e.latlng.lat, lng: e.latlng.lng, note: '', photos: [] });
       drawMarkers(); drawLines(); renderPois(); renderSegs(); save();
       toast('✅ 已添加途经点，在下方编辑名字与交通');
     });
@@ -1410,10 +1619,14 @@ function renderPois(){
           '<label class="poi-note">经<input type="text" data-f="lng" data-id="' + p.id + '" value="' + p.lng.toFixed(6) + '" style="width:86px"></label>' +
         '</div>' +
         '<textarea data-f="note" data-id="' + p.id + '" rows="1" placeholder="小记：玩法/门票/预约方式…">' + esc(p.note) + '</textarea>' +
-        (p.photo ? '<img class="poi-thumb" src="' + p.photo + '">' : '') +
+        '<div class="poi-thumbs">' +
+          (p.photos || []).map(function(ph, pi){
+            return '<span class="poi-thumb-wrap"><img class="poi-thumb" src="' + ph + '">' +
+              '<button class="poi-thumb-del" data-act="poi-delphoto" data-id="' + p.id + '" data-pidx="' + pi + '" data-editonly title="删除这张照片">✕</button></span>';
+          }).join('') +
+        '</div>' +
         '<div class="poi-row" style="margin-top:6px">' +
-          '<label class="up-btn">📷 照片<input type="file" accept="image/*" data-act="poi-photo" data-id="' + p.id + '"></label>' +
-          (p.photo ? '<button class="mini-btn" data-act="poi-delphoto" data-id="' + p.id + '">删照片</button>' : '') +
+          '<label class="up-btn">📷 照片（可多选）<input type="file" accept="image/*" multiple data-act="poi-photo" data-id="' + p.id + '"></label>' +
           '<button class="mini-btn" data-act="poi-loc" data-id="' + p.id + '">📍 定位</button>' +
           '<button class="mini-btn" data-act="poi-up" data-id="' + p.id + '">↑</button>' +
           '<button class="mini-btn" data-act="poi-down" data-id="' + p.id + '">↓</button>' +
@@ -1432,6 +1645,7 @@ function bindPoiList(){
     var item = h.closest('.poi-item');
     if (!item) return;
     startDrag(e, item, box, '.poi-item', function(){
+      pushUndo('景点排序');
       var order = $$('.poi-item', box).map(function(el){ return el.getAttribute('data-poiid'); });
       state.pois = order.map(function(id){
         return state.pois.find(function(x){ return x.id === id; });
@@ -1471,15 +1685,26 @@ function bindPoiList(){
       }
       return;
     }
-    if (el.getAttribute('data-act') === 'poi-photo' && el.files[0]){
+    if (el.getAttribute('data-act') === 'poi-photo' && el.files.length){
       var id = el.getAttribute('data-id');
-      compressImage(el.files[0], 1100, function(durl){
-        var p = state.pois.find(function(x){ return x.id === id; });
-        if (!p) return;
-        p.photo = durl;
-        drawMarkers(); renderPois(); save();
-        toast('📷 照片已加入「' + p.name + '」');
+      var p0 = state.pois.find(function(x){ return x.id === id; });
+      if (!p0) return;
+      pushUndo('添加景点照片');
+      var files = Array.prototype.slice.call(el.files).slice(0, 6); /* 单次最多 6 张，控制存储体积 */
+      var done = 0;
+      files.forEach(function(f){
+        compressImage(f, 1100, function(durl){
+          var p = state.pois.find(function(x){ return x.id === id; });
+          if (!p) return;
+          p.photos.push(durl);
+          done++;
+          if (done === files.length){
+            drawMarkers(); renderPois(); save();
+            toast('📷 已加入 ' + done + ' 张照片');
+          }
+        });
       });
+      el.value = '';
     }
   });
   box.addEventListener('click', function(e){
@@ -1494,6 +1719,7 @@ function bindPoiList(){
     else if (act === 'poi-down' && idx < state.pois.length - 1){ swapPoi(idx, idx + 1); }
     else if (act === 'poi-del'){
       if (!confirm('删除「' + state.pois[idx].name + '」？相关交通段会一并清除。')) return;
+      pushUndo('删除景点');
       var delId = state.pois[idx].id;
       state.pois.splice(idx, 1);
       Object.keys(state.segs).forEach(function(k){
@@ -1502,12 +1728,18 @@ function bindPoiList(){
       drawMarkers(); drawLines(); renderPois(); renderSegs(); save();
     }
     else if (act === 'poi-delphoto'){
-      state.pois[idx].photo = null;
-      drawMarkers(); renderPois(); save();
+      var pd = state.pois[idx];
+      var pi = +btn.getAttribute('data-pidx');
+      if (pd && pd.photos && pd.photos[pi] != null){
+        pushUndo('删除景点照片');
+        pd.photos.splice(pi, 1);
+        drawMarkers(); renderPois(); save();
+      }
     }
   });
 }
 function swapPoi(i, j){
+  pushUndo('调整景点顺序');
   var t = state.pois[i]; state.pois[i] = state.pois[j]; state.pois[j] = t;
   drawMarkers(); drawLines(); renderPois(); renderSegs(); save();
 }
@@ -1550,6 +1782,7 @@ function bindSegList(){
       var key = sel.getAttribute('data-seg');
       var cfg = state.segs[key];
       if (cfg){
+        pushUndo('交通方式');
         cfg.mode = sel.value;
         if (MODES[cfg.mode] && !MODES[cfg.mode].route){ delete cfg.line; delete cfg.realKm; delete cfg.durMin; }
         drawLines(); renderSegs(); save();
@@ -1588,6 +1821,7 @@ function bindSegList(){
       var routes2 = altCache[k2];
       var cfg2 = state.segs[k2];
       if (routes2 && routes2[idx2] && cfg2){
+        pushUndo('选用路线方案');
         cfg2.line = routes2[idx2].line;
         cfg2.realKm = Math.round(routes2[idx2].km * 10) / 10;
         cfg2.durMin = routes2[idx2].min;
@@ -1650,6 +1884,7 @@ function bindDays(){
     var card = h.closest('.day-card');
     if (!card) return;
     startDrag(e, card, box, '.day-card', function(){
+      pushUndo('行程排序');
       state.days = $$('.day-card', box).map(function(el){
         return state.days.find(function(d){ return d.id === el.getAttribute('data-dayid'); });
       }).filter(Boolean);
@@ -1672,6 +1907,7 @@ function bindDays(){
     if (inp.getAttribute('data-act') !== 'day-photo' || !inp.files.length) return;
     var d = state.days.find(function(x){ return x.id === inp.getAttribute('data-id'); });
     if (!d) return;
+    pushUndo('添加行程照片');
     var files = Array.prototype.slice.call(inp.files).slice(0, 9);
     var done = 0;
     files.forEach(function(f){
@@ -1690,15 +1926,18 @@ function bindDays(){
     if (!d) return;
     var act = btn.getAttribute('data-act');
     if (act === 'day-delphoto'){
+      pushUndo('删除行程照片');
       d.photos.splice(+btn.getAttribute('data-idx'), 1);
       renderDays(); save();
     } else if (act === 'day-del'){
       if (!confirm('删除 D' + (state.days.indexOf(d) + 1) + ' 整天？')) return;
+      pushUndo('删除行程');
       state.days.splice(state.days.indexOf(d), 1);
       renderDays(); save();
     } else if (act === 'day-up'){
       var i = state.days.indexOf(d);
       if (i > 0){
+        pushUndo('行程排序');
         var t = state.days[i - 1]; state.days[i - 1] = state.days[i]; state.days[i] = t;
         renderDays(); save();
       }
@@ -1805,6 +2044,7 @@ function bindBlocks(){
     var bk = (state.blocks || []).find(function(x){ return x.id === el.getAttribute('data-id'); });
     if (!bk) return;
     if (el.getAttribute('data-act') === 'blk-style'){
+      pushUndo('卡片样式');
       bk.style = el.value;
       renderBlocks(); save();
     } else if (el.getAttribute('data-act') === 'blk-photo' && el.files.length){
@@ -1827,15 +2067,18 @@ function bindBlocks(){
     if (!bk) return;
     var act = btn.getAttribute('data-act');
     if (act === 'blk-delphoto'){
+      pushUndo('删除卡片照片');
       bk.photos.splice(+btn.getAttribute('data-idx'), 1);
       renderBlocks(); save();
     } else if (act === 'blk-del'){
       if (!confirm('删除这张自定义卡片？')) return;
+      pushUndo('删除卡片');
       state.blocks.splice(state.blocks.indexOf(bk), 1);
       renderBlocks(); save();
     } else if (act === 'blk-up'){
       var i = state.blocks.indexOf(bk);
       if (i > 0){
+        pushUndo('卡片排序');
         var t = state.blocks[i - 1]; state.blocks[i - 1] = state.blocks[i]; state.blocks[i] = t;
         renderBlocks(); save();
       }
@@ -1848,6 +2091,7 @@ function bindBlocks(){
     var s = h.closest('.blk');
     if (!s) return;
     startDrag(e, s, box, '.blk', function(){
+      pushUndo('卡片排序');
       state.blocks = $$('.blk', box).map(function(el){
         return state.blocks.find(function(b){ return b.id === el.getAttribute('data-blkid'); });
       }).filter(Boolean);
@@ -1856,15 +2100,16 @@ function bindBlocks(){
   });
 }
 
-/* ---------- 贴士 ---------- */
+/* ---------- 贴士（v0.9：按稳定 id 存储样式，拖拽不再错位 FR-05） ---------- */
+function newTipId(){ return 'tip-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 10000); }
 function renderTips(){
   var box = $('#tipsList');
   box.innerHTML = state.tips.map(function(t, i){
-    return '<li data-tipidx="' + i + '">' +
+    return '<li data-tipid="' + t.id + '">' +
       '<span class="drag-handle" data-editonly title="按住拖动排序">⠿</span>' +
       '<span class="tip-no">' + (i + 1) + '.</span>' +
-      '<span class="tip-text" contenteditable="true" spellcheck="false" data-idx="' + i + '">' + esc(t) + '</span>' +
-      '<button class="mini-btn" data-editonly data-act="tip-del" data-idx="' + i + '">✕</button></li>';
+      '<span class="tip-text" contenteditable="true" spellcheck="false" data-tid="' + t.id + '">' + esc(t.text) + '</span>' +
+      '<button class="mini-btn" data-editonly data-act="tip-del" data-tid="' + t.id + '">✕</button></li>';
   }).join('');
   applyAllTextStyles();
 }
@@ -1877,21 +2122,29 @@ function bindTips(){
     var li = h.closest('li');
     if (!li) return;
     startDrag(e, li, box, 'li', function(){
-      var order = $$('li', box).map(function(el){ return +el.getAttribute('data-tipidx'); });
-      var next = [];
-      order.forEach(function(i){ if (state.tips[i] != null) next.push(state.tips[i]); });
-      state.tips = next;
+      pushUndo('贴士排序');
+      var order = $$('li', box).map(function(el){ return el.getAttribute('data-tipid'); });
+      state.tips = order.map(function(id){
+        return state.tips.find(function(x){ return x.id === id; });
+      }).filter(Boolean);
       renderTips(); save();
     });
   });
   box.addEventListener('input', function(e){
     var el = e.target.closest('.tip-text');
-    if (el){ state.tips[+el.getAttribute('data-idx')] = el.innerText; saveSoon(); }
+    if (el){
+      var t = state.tips.find(function(x){ return x.id === el.getAttribute('data-tid'); });
+      if (t) t.text = el.innerText;
+      saveSoon();
+    }
   });
   box.addEventListener('click', function(e){
     var btn = e.target.closest('[data-act="tip-del"]');
     if (btn){
-      state.tips.splice(+btn.getAttribute('data-idx'), 1);
+      var idx = state.tips.findIndex(function(x){ return x.id === btn.getAttribute('data-tid'); });
+      if (idx < 0) return;
+      pushUndo('删除贴士');
+      state.tips.splice(idx, 1);
       renderTips(); save();
     }
   });
@@ -2096,6 +2349,62 @@ function toast(msg){
   toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2600);
 }
 
+/* ---------- 撤销/重做（FR-04）：结构性操作快照栈，文本编辑走浏览器原生撤销 ---------- */
+var undoStack = [], redoStack = [];
+var UNDO_MAX = 30;
+var UNDO_BUDGET = 8 * 1024 * 1024; /* 栈内快照总体积上限（含照片约 8MB），超限丢最旧 */
+function pushUndo(){
+  var snap = null;
+  try { snap = JSON.stringify(state); } catch(e){ return; }
+  undoStack.push(snap);
+  redoStack.length = 0;
+  var total = 0, cut = -1;
+  for (var i = undoStack.length - 1; i >= 0; i--){
+    total += undoStack[i].length;
+    if (total > UNDO_BUDGET){ cut = i; break; }
+  }
+  if (cut > 0) undoStack.splice(0, cut);
+  while (undoStack.length > UNDO_MAX) undoStack.shift();
+  updUndoBtns();
+}
+function updUndoBtns(){
+  var u = $('#btnUndo'), r = $('#btnRedo');
+  if (u) u.disabled = !undoStack.length;
+  if (r) r.disabled = !redoStack.length;
+}
+function renderAllFromState(){
+  renderStatic(); renderBg(); drawMarkers(); drawLines(); renderPois(); applyPoiLayout();
+  renderSegs(); renderDays(); renderBlocks(); renderTips(); fitAll(); applySectionOrder();
+  applyGlobalFont(); applyAllTextStyles();
+  $('#fontPick').value = state.fontFamily || '';
+  if (state.freeLayout) applyFreeLayout();
+}
+function applyStateSnap(snap){
+  state = JSON.parse(snap);
+  state.segs = state.segs || {}; state.blocks = state.blocks || []; state.days = state.days || [];
+  state.tips = state.tips || []; state.textStyles = state.textStyles || {};
+  renderAllFromState();
+  persist();
+}
+function undo(){
+  if (!undoStack.length) return;
+  var cur = null;
+  try { cur = JSON.stringify(state); } catch(e){ return; }
+  redoStack.push(cur);
+  applyStateSnap(undoStack.pop());
+  updUndoBtns();
+  toast('↩︎ 已撤销');
+}
+function redo(){
+  if (!redoStack.length) return;
+  var cur = null;
+  try { cur = JSON.stringify(state); } catch(e){ return; }
+  undoStack.push(cur);
+  applyStateSnap(redoStack.pop());
+  updUndoBtns();
+  toast('↪︎ 已重做');
+}
+
 /* ---------- 全局控件绑定 ---------- */
 function bindControls(){
   /* 移动端「⋯ 更多」菜单：展开低频操作，点任意功能项或页面空白处自动收起 */
@@ -2121,7 +2430,89 @@ function bindControls(){
     if (topbarEl.classList.contains('menu-open') && !e.target.closest('#topbar')) closeMenu();
   });
 
-  $('#btnMode').addEventListener('click', function(){ setEditing(!editing()); });
+  /* 导出下拉菜单（FR-20）：HTML/图片/PDF/备份/导入 收进一个入口 */
+  var expMenu = $('#exportMenu'), btnExport = $('#btnExport');
+  function closeExportMenu(){
+    expMenu.classList.remove('show');
+    btnExport.setAttribute('aria-expanded', 'false');
+  }
+  btnExport.addEventListener('click', function(e){
+    e.stopPropagation();
+    var open = expMenu.classList.toggle('show');
+    btnExport.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  expMenu.addEventListener('click', function(e){
+    if (e.target.closest('.btn')) closeExportMenu();
+  });
+  document.addEventListener('click', function(e){
+    if (expMenu.classList.contains('show') && !e.target.closest('#exportMenu') && !e.target.closest('#btnExport')) closeExportMenu();
+  });
+  $('#btnExpHtml').addEventListener('click', exportHTML);
+
+  /* 备份导入导出（FR-01）：菜单项 + 拖入 .json/.html 即恢复 */
+  $('#btnBackup').addEventListener('click', exportBackup);
+  $('#btnRestore').addEventListener('click', function(){ $('#restoreFile').click(); });
+  $('#restoreFile').addEventListener('change', function(){
+    var f = this.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function(){ importBackupText(rd.result, f.name); };
+    rd.readAsText(f);
+    this.value = '';
+  });
+  document.addEventListener('dragover', function(e){ e.preventDefault(); });
+  document.addEventListener('drop', function(e){
+    e.preventDefault();
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!f) return;
+    if (!/\.(json|html?)$/i.test(f.name)){ toast('仅支持 .json 备份或导出的 .html 文件'); return; }
+    var rd = new FileReader();
+    rd.onload = function(){ importBackupText(rd.result, f.name); };
+    rd.readAsText(f);
+  });
+
+  /* 快照面板（FR-03） */
+  $('#btnSnap').addEventListener('click', openSnapshotPanel);
+  $('#btnSnapClose').addEventListener('click', function(){ $('#snapMask').classList.remove('show'); });
+  $('#snapMask').addEventListener('click', function(e){
+    if (e.target === this) this.classList.remove('show');
+  });
+  $('#snapList').addEventListener('click', function(e){
+    var b = e.target.closest('[data-snap]');
+    if (b) restoreSnapshot(+b.getAttribute('data-snap'));
+  });
+
+  /* 封面「装扮」抽屉：默认收起，点开才显示模板/背景工具 */
+  $('#btnDress').addEventListener('click', function(){
+    var p = $('#dressPanel');
+    var open = p.hidden;
+    p.hidden = !open;
+    this.classList.toggle('open', open);
+    this.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  /* 撤销/重做（FR-04）：按钮 + 快捷键（文本框内不拦截，保留原生撤销） */
+  $('#btnUndo').addEventListener('click', undo);
+  $('#btnRedo').addEventListener('click', redo);
+  document.addEventListener('keydown', function(e){
+    if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return;
+    var t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    e.preventDefault();
+    if (e.shiftKey) redo(); else undo();
+  });
+
+  /* 手机端预览态胶囊（FR-22） */
+  $('#mobEditPill').addEventListener('click', function(){
+    setEditing(true);
+    if (IS_MOBILE){ state.mobPref = 'edit'; persist(); }
+  });
+
+  $('#btnMode').addEventListener('click', function(){
+    setEditing(!editing());
+    /* FR-22：手机端记住用户的模式偏好 */
+    if (IS_MOBILE){ state.mobPref = editing() ? 'edit' : 'preview'; persist(); }
+  });
   $('#btnExport').addEventListener('click', exportHTML);
   $('#btnHelp').addEventListener('click', function(){ $('#helpMask').classList.add('show'); });
   $('#btnHelpClose').addEventListener('click', function(){ $('#helpMask').classList.remove('show'); });
@@ -2143,6 +2534,8 @@ function bindControls(){
 
   /* 自由摆放 + 全局字体 */
   $('#btnFree').addEventListener('click', function(){
+    if (IS_MOBILE){ toast('📱 手机端暂不支持自由摆放，请在电脑上使用'); return; }
+    pushUndo('自由摆放开关');
     state.freeLayout = !state.freeLayout;
     applyFreeLayout();
     save();
@@ -2163,16 +2556,19 @@ function bindControls(){
   });
 
   $('#btnAddPoi').addEventListener('click', function(){
+    pushUndo('添加景点');
     var c = map ? map.getCenter() : { lat: 27.68, lng: 118.0 };
-    state.pois.push({ id: uid(), name: '新地点', lat: c.lat, lng: c.lng, note: '', photo: null });
+    state.pois.push({ id: uid(), name: '新地点', lat: c.lat, lng: c.lng, note: '', photos: [] });
     drawMarkers(); drawLines(); renderPois(); renderSegs(); save();
     toast('✅ 已添加，双击地图也可快速添加');
   });
   $('#btnAddDay').addEventListener('click', function(){
+    pushUndo('添加行程');
     state.days.push({ id: uid(), title: 'D' + (state.days.length + 1) + ' 新的一天【点我改标题】', text: '【点我编辑】写上这一天的安排…', photos: [] });
     renderDays(); save();
   });
   $('#btnAddBlock').addEventListener('click', function(){
+    pushUndo('添加卡片');
     state.blocks.push({ id: uid(), style: 'note', title: '新卡片【点我改标题】', text: '【点我编辑】想写什么都可以：美食清单、购物计划、旅行感悟…', photos: [], color: '#d95f43' });
     renderBlocks(); save();
     toast('✅ 已添加卡片，样式和颜色在卡片左上角换');
@@ -2201,7 +2597,8 @@ function bindControls(){
     toast('🔄 地图已恢复示例路线');
   });
   $('#btnAddTip').addEventListener('click', function(){
-    state.tips.push('新贴士【点我编辑】');
+    pushUndo('添加贴士');
+    state.tips.push({ id: newTipId(), text: '新贴士【点我编辑】' });
     renderTips(); save();
   });
 
@@ -2342,6 +2739,62 @@ function initResizeHandles(){
     });
   });
 }
+function ensureGuides(){
+  var wrap = $('#wrap');
+  if (!wrap.querySelector('.free-guide')){
+    var gv = document.createElement('div'); gv.className = 'free-guide gv';
+    var gh = document.createElement('div'); gh.className = 'free-guide gh';
+    wrap.appendChild(gv); wrap.appendChild(gh);
+  }
+  return {
+    gv: wrap.querySelector('.free-guide.gv'),
+    gh: wrap.querySelector('.free-guide.gh')
+  };
+}
+function hideGuides(){
+  var g = ensureGuides();
+  g.gv.style.display = 'none';
+  g.gh.style.display = 'none';
+}
+/* 吸附计算：对齐其他卡片的左/右/中线 与 上/下/中线，阈值 8px（FR-06） */
+var SNAP_T = 8;
+function snapFree(sec, nx, ny){
+  var wrap = $('#wrap'), wr = wrap.getBoundingClientRect();
+  var w = sec.offsetWidth, h = sec.offsetHeight;
+  var bestX = null, bestDX = SNAP_T, gx = null;
+  var bestY = null, bestDY = SNAP_T, gy = null;
+  $$('#wrap [data-sec]').forEach(function(s){
+    if (s === sec) return;
+    var r = s.getBoundingClientRect();
+    var tl = r.left - wr.left, tr = r.right - wr.left, tc = tl + r.width / 2;
+    var tt = r.top - wr.top, tb = r.bottom - wr.top, tm = tt + r.height / 2;
+    /* X 向候选：[我的当前值, 目标锚点, 吸附后我的x, 辅助线x] */
+    [
+      [nx, tl, tl, tl], [nx, tc, tc, tc], [nx, tr, tr, tr],
+      [nx + w / 2, tc, tc - w / 2, tc],
+      [nx + w, tl, tl - w, tl], [nx + w, tc, tc - w / 2, tc], [nx + w, tr, tr - w, tr]
+    ].forEach(function(pr){
+      var d = Math.abs(pr[0] - pr[1]);
+      if (d < bestDX){ bestDX = d; bestX = pr[2]; gx = pr[3]; }
+    });
+    /* Y 向候选：[我的当前值, 目标锚点, 吸附后我的y, 辅助线y] */
+    [
+      [ny, tt, tt, tt], [ny, tm, tm, tm], [ny, tb, tb, tb],
+      [ny + h / 2, tm, tm - h / 2, tm],
+      [ny + h, tt, tt - h, tt], [ny + h, tm, tm - h / 2, tm], [ny + h, tb, tb - h, tb]
+    ].forEach(function(pr){
+      var d = Math.abs(pr[0] - pr[1]);
+      if (d < bestDY){ bestDY = d; bestY = pr[2]; gy = pr[3]; }
+    });
+  });
+  if (bestX != null) nx = bestX;
+  if (bestY != null) ny = bestY;
+  /* 显示辅助线 */
+  var g = ensureGuides();
+  if (gx != null){ g.gv.style.display = 'block'; g.gv.style.left = gx + 'px'; } else g.gv.style.display = 'none';
+  if (gy != null){ g.gh.style.display = 'block'; g.gh.style.top = gy + 'px'; } else g.gh.style.display = 'none';
+  return { x: Math.round(nx), y: Math.round(ny) };
+}
 function bindFreeDrag(){
   var wrap = $('#wrap');
   wrap.addEventListener('pointerdown', function(e){
@@ -2358,8 +2811,9 @@ function bindFreeDrag(){
     sec.classList.add('dragging');
     document.body.classList.add('drag-ghost');
     function onMove(ev){
-      fp.x = ox + (ev.clientX - sx);
-      fp.y = oy + (ev.clientY - sy);
+      var snapped = snapFree(sec, ox + (ev.clientX - sx), oy + (ev.clientY - sy));
+      fp.x = snapped.x;
+      fp.y = snapped.y;
       sec.style.left = fp.x + 'px';
       sec.style.top = fp.y + 'px';
     }
@@ -2369,6 +2823,7 @@ function bindFreeDrag(){
       document.removeEventListener('pointercancel', onUp);
       sec.classList.remove('dragging');
       document.body.classList.remove('drag-ghost');
+      hideGuides();
       updateWrapHeight();
       save();
     }
@@ -2385,7 +2840,7 @@ function styleKeyFor(el){
   if (el.classList.contains('blk-text')) return 'blk:' + el.getAttribute('data-id') + ':text';
   var f = el.getAttribute('data-f');
   if ((f === 'title' || f === 'text') && el.getAttribute('data-id')) return 'day:' + el.getAttribute('data-id') + ':' + f;
-  if (el.classList.contains('tip-text')) return 'tip:' + el.getAttribute('data-idx');
+  if (el.classList.contains('tip-text')) return 'tip:' + el.getAttribute('data-tid');
   return null;
 }
 function getTS(key){ return state.textStyles[key] || {}; }
@@ -2403,7 +2858,7 @@ function applyAllTextStyles(){
   $$('[data-f="title"],[data-f="text"]').forEach(function(el){
     applyStyleToEl(el, getTS('day:' + el.getAttribute('data-id') + ':' + el.getAttribute('data-f')));
   });
-  $$('.tip-text').forEach(function(el){ applyStyleToEl(el, getTS('tip:' + el.getAttribute('data-idx'))); });
+  $$('.tip-text').forEach(function(el){ applyStyleToEl(el, getTS('tip:' + el.getAttribute('data-tid'))); });
 }
 var sbEl = null, sbKey = null;
 function showStyleBar(el, key){
@@ -2455,7 +2910,17 @@ function bindStyleBar(){
 function hideStyleBar(){ $('#styleBar').classList.remove('show'); sbEl = sbKey = null; }
 
 /* ---------- 启动 ---------- */
+var IS_MOBILE = window.matchMedia('(max-width: 768px)').matches;
 loadState();
+/* 快照基线：把当前载入的内容视为「已保存」，之后的每次持久化前压入快照栈 */
+try { lastSavedJson = JSON.stringify(state); } catch(e){ lastSavedJson = null; }
+/* FR-22：手机端默认进入预览态（导出副本除外），用户偏好记住后不再强制 */
+var mobilePreviewDefault = false;
+if (IS_MOBILE && !IS_EXPORT && state.mobPref !== 'edit'){ setEditing(false); mobilePreviewDefault = true; }
+/* 手机端强制关闭自由摆放（像素坐标在窄屏会错位，FR-06） */
+if (IS_MOBILE && state.freeLayout) state.freeLayout = false;
+/* FR-21：旧版字体值（楷体/文楷/毛笔/狂草）收敛映射 */
+if (state.fontFamily && ['kai','wk','ma','zhi'].indexOf(state.fontFamily) >= 0) state.fontFamily = '';
 bindStatic();
 bindSearch();
 bindPoiList();
@@ -2483,8 +2948,10 @@ bindStyleBar();
 applyGlobalFont();
 applyAllTextStyles();
 $('#fontPick').value = state.fontFamily || '';
+updUndoBtns();
 if (state.freeLayout) applyFreeLayout();
 if (IS_EXPORT) toast('📄 这是导出的攻略副本，可继续编辑并再次导出');
+else if (mobilePreviewDefault) toast('📱 已进入预览模式，点右下角「✏️ 切换编辑」开始编辑');
 </script>
 </body>
 </html>
