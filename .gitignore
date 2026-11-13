@@ -1,0 +1,8 @@
+# IDE / 工具目录（不参与发布）
+.idea/
+.workbuddy/
+
+# 系统垃圾文件
+.DS_Store
+Thumbs.db
+desktop.ini
